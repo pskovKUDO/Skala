@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оптимизация изображений для сайта Кудо Скала</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2ea8ff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-area {
+            border: 2px dashed #2ea8ff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            background: #e8f4ff;
+            border-color: #1f7ac0;
+        }
+        .upload-area.dragover {
+            background: #d4edff;
+            border-color: #1f7ac0;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn {
+            background: #2ea8ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #1f7ac0;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .image-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 10px 0;
+            background: #fafafa;
+        }
+        .image-preview {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        .image-info {
+            flex: 1;
+        }
+        .image-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .image-size {
+            color: #666;
+            font-size: 14px;
+        }
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover {
+            background: #218838;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #2ea8ff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Оптимизация изображений для сайта Кудо Скала</h1>
+        
+        <div class="instructions">
+            <h3>📋 Инструкция:</h3>
+            <ol>
+                <li>Выберите или перетащите изображения в область загрузки</li>
+                <li>Нажмите "Оптимизировать" для сжатия</li>
+                <li>Скачайте оптимизированные изображения</li>
+                <li>Замените оригинальные файлы в папках сайта</li>
+            </ol>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Перетащите изображения сюда или нажмите для выбора</p>
+            <p style="color: #666; font-size: 14px;">Поддерживаются: JPG, PNG, WebP</p>
+            <input type="file" id="fileInput" multiple accept="image/*">
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn" id="optimizeBtn" disabled>⚡ Оптимизировать изображения</button>
+            <button class="btn" id="clearBtn">🗑️ Очистить</button>
+        </div>
+
+        <div class="progress" id="progressContainer" style="display: none;">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const optimizeBtn = document.getElementById('optimizeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const results = document.getElementById('results');
+
+        let selectedFiles = [];
+
+        // Обработка drag & drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            updateUI();
+        }
+
+        function updateUI() {
+            if (selectedFiles.length > 0) {
+                optimizeBtn.disabled = false;
+                optimizeBtn.textContent = `⚡ Оптимизировать ${selectedFiles.length} изображений`;
+            } else {
+                optimizeBtn.disabled = true;
+                optimizeBtn.textContent = '⚡ Оптимизировать изображения';
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function optimizeImage(file, quality = 0.8) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = () => {
+                    // Изменяем размер если изображение слишком большое
+                    let { width, height } = img;
+                    const maxWidth = 1920;
+                    
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Рисуем изображение на canvas
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Конвертируем в blob
+                    canvas.toBlob((blob) => {
+                        resolve({
+                            original: file,
+                            optimized: blob,
+                            originalSize: file.size,
+                            optimizedSize: blob.size,
+                            savings: ((file.size - blob.size) / file.size) * 100
+                        });
+                    }, 'image/jpeg', quality);
+                };
+
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function optimizeImages() {
+            if (selectedFiles.length === 0) return;
+
+            optimizeBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            results.innerHTML = '';
+
+            const optimizedImages = [];
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const progress = ((i + 1) / selectedFiles.length) * 100;
+                progressBar.style.width = progress + '%';
+
+                try {
+                    const result = await optimizeImage(file);
+                    optimizedImages.push(result);
+                    
+                    // Показываем результат
+                    const item = document.createElement('div');
+                    item.className = 'image-item';
+                    item.innerHTML = `
+                        <img src="${URL.createObjectURL(file)}" class="image-preview" alt="Preview">
+                        <div class="image-info">
+                            <div class="image-name">${file.name}</div>
+                            <div class="image-size">
+                                ${formatBytes(result.originalSize)} → ${formatBytes(result.optimizedSize)} 
+                                (${result.savings.toFixed(1)}% экономии)
+                            </div>
+                        </div>
+                        <a href="${URL.createObjectURL(result.optimized)}" 
+                           download="${file.name.replace(/\.[^/.]+$/, '_optimized.jpg')}" 
+                           class="download-btn">📥 Скачать</a>
+                    `;
+                    results.appendChild(item);
+                } catch (error) {
+                    console.error('Ошибка при оптимизации:', error);
+                }
+            }
+
+            progressContainer.style.display = 'none';
+            optimizeBtn.disabled = false;
+            updateUI();
+
+            // Показываем общую статистику
+            const totalOriginal = optimizedImages.reduce((sum, img) => sum + img.originalSize, 0);
+            const totalOptimized = optimizedImages.reduce((sum, img) => sum + img.optimizedSize, 0);
+            const totalSavings = ((totalOriginal - totalOptimized) / totalOriginal) * 100;
+
+            const stats = document.createElement('div');
+            stats.style.cssText = 'background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;';
+            stats.innerHTML = `
+                <h3 style="margin: 0 0 10px; color: #155724;">🎉 Оптимизация завершена!</h3>
+                <p style="margin: 0; color: #155724;">
+                    Общая экономия: ${formatBytes(totalOriginal - totalOptimized)} 
+                    (${totalSavings.toFixed(1)}% от исходного размера)
+                </p>
+            `;
+            results.insertBefore(stats, results.firstChild);
+        }
+
+        function clearResults() {
+            selectedFiles = [];
+            results.innerHTML = '';
+            progressContainer.style.display = 'none';
+            fileInput.value = '';
+            updateUI();
+        }
+
+        optimizeBtn.addEventListener('click', optimizeImages);
+        clearBtn.addEventListener('click', clearResults);
+    </script>
+</body>
+</html>

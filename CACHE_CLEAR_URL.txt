@@ -1,0 +1,17 @@
+Для обновления карточки ссылки в Telegram/VK/Facebook:
+
+1. Facebook Debugger:
+   https://developers.facebook.com/tools/debug/
+
+2. LinkedIn Post Inspector:
+   https://www.linkedin.com/post-inspector/
+
+3. Twitter Card Validator:
+   https://cards-dev.twitter.com/validator
+
+Вставьте ссылку: https://4aikaa2.github.io/skala-kudo/
+Нажмите "Scrape Again" или "Validate"
+
+Или просто подождите 5-10 минут после коммита на GitHub.
+
+

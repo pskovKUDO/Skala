@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#121621"/>
+  <circle cx="260" cy="320" r="120" fill="#64fbd2" opacity="0.2"/>
+  <circle cx="520" cy="280" r="160" fill="#2ea8ff" opacity="0.2"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#e6e8ee" font-family="Arial, Helvetica, sans-serif" font-size="26">Фото 4</text>
+</svg>
+
+
