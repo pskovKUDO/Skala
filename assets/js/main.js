@@ -71,6 +71,11 @@ if (brandLogo) {
   var currentIndex = 0;
   var currentPhotos = [];
   
+  function setNavVisible(visible) {
+    if (prevBtn) prevBtn.style.display = visible ? '' : 'none';
+    if (nextBtn) nextBtn.style.display = visible ? '' : 'none';
+  }
+  
   function openPhoto(index) {
     if (index < 0 || index >= currentPhotos.length) return;
     currentIndex = index;
@@ -80,15 +85,17 @@ if (brandLogo) {
   }
   
   function showPrev() {
-    if (currentIndex > 0) {
-      openPhoto(currentIndex - 1);
-    }
+    if (!currentPhotos.length) return;
+    var nextIndex = currentIndex - 1;
+    if (nextIndex < 0) nextIndex = currentPhotos.length - 1; // циклическая навигация
+    openPhoto(nextIndex);
   }
   
   function showNext() {
-    if (currentIndex < currentPhotos.length - 1) {
-      openPhoto(currentIndex + 1);
-    }
+    if (!currentPhotos.length) return;
+    var nextIndex = currentIndex + 1;
+    if (nextIndex >= currentPhotos.length) nextIndex = 0; // циклическая навигация
+    openPhoto(nextIndex);
   }
   
   // Обработчики для кнопок навигации
@@ -149,6 +156,7 @@ if (brandLogo) {
           openPhoto(0);
           lightbox.hidden = false;
           document.body.style.overflow = 'hidden';
+          setNavVisible(true);
         }
       }
     });
@@ -169,6 +177,7 @@ if (brandLogo) {
           var href = item.getAttribute('href');
           currentIndex = currentPhotos.findIndex(function(p) { return p.href === href; });
           if (currentIndex === -1) currentIndex = 0;
+          setNavVisible(true);
         } else {
           // Иначе просто показываем фото
           var href = item.getAttribute('href');
@@ -177,6 +186,7 @@ if (brandLogo) {
             if (lightboxCaption) lightboxCaption.textContent = item.getAttribute('data-caption') || '';
             lightbox.hidden = false;
             document.body.style.overflow = 'hidden';
+            // для одиночных фото оставляем стрелки видимыми по умолчанию
           }
         }
       }
@@ -208,10 +218,14 @@ if (coachName) {
     if (!lightbox) return;
     var lightboxImg = lightbox.querySelector('.lightbox-image');
     var lightboxCaption = lightbox.querySelector('.lightbox-caption');
+    var prevBtn = lightbox.querySelector('.lightbox-prev');
+    var nextBtn = lightbox.querySelector('.lightbox-next');
     lightboxImg.src = 'foto/Ozyumenko_Viktor_Vladimirovich.jpg';
     if (lightboxCaption) lightboxCaption.textContent = 'Чёрный пояс, 3 дан. Судья первой категории';
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
   };
   coachName.addEventListener('click', openCoach);
 }
@@ -339,11 +353,15 @@ if (coachName) {
     if (!lightbox) return;
     var lightboxImg = lightbox.querySelector('.lightbox-image');
     var lightboxCaption = lightbox.querySelector('.lightbox-caption');
+    var prevBtn = lightbox.querySelector('.lightbox-prev');
+    var nextBtn = lightbox.querySelector('.lightbox-next');
     // Используем WebP версию
     lightboxImg.src = 'foto/poyas_kudo.jpeg';
     if (lightboxCaption) lightboxCaption.textContent = 'Чёрный пояс, 3 дан';
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
   });
 })();
 
