@@ -1,6 +1,9 @@
-// Год в футере (если элемент существует)
+// Год в футере (если элемент существует): показываем диапазон 2025–Текущий год
 var yearEl = document.getElementById('year');
-if (yearEl) yearEl.textContent = new Date().getFullYear();
+if (yearEl) {
+  var currentYear = new Date().getFullYear();
+  yearEl.textContent = currentYear < 2025 ? 2025 : currentYear;
+}
 
 // Мобильное меню
 var navToggle = document.querySelector('.nav-toggle');
@@ -209,67 +212,183 @@ if (brandLogo) {
   });
 })();
 
-// Открытие лайтбокса по имени тренера
-var coachName = document.querySelector('.hero .name');
-if (coachName) {
+// Умный календарь соревнований: прошедшие (с годом) сверху, будущие ниже, ближайшее помечено
+(function () {
+  var eventsTable = document.querySelector('#events .table tbody');
+  if (!eventsTable) return;
+  var eventsScroll = document.querySelector('#events .events-scroll');
+  var emptyEl = document.getElementById('events-empty');
+
+  var monthMap = {
+    'янв.': 1, 'фев.': 2, 'мар.': 3, 'апр.': 4, 'май.': 5, 'мая': 5,
+    'июн.': 6, 'июл.': 7, 'авг.': 8,
+    'сент.': 9, 'окт.': 10, 'нояб.': 11, 'дек.': 12,
+    'января': 1, 'февраля': 2, 'марта': 3, 'апреля': 4,
+    'июня': 6, 'июля': 7, 'августа': 8,
+    'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
+  };
+  var today = new Date();
+  // нормализуем "сегодня" до полуночи
+  var todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  var parseDate = function (text) {
+    // примеры: "20–21 сент.", "6–7 дек.", "12–15 декабря", "21–22 фев."
+    var m = text.trim().match(/(\d{1,2})(?:[–-]\d{1,2})?\s*(янв\.|фев\.|мар\.|апр\.|май\.|мая|июн\.|июл\.|авг\.|сент\.|окт\.|нояб\.|дек\.|января|февраля|марта|апреля|июня|июля|августа|сентября|октября|ноября|декабря)/i);
+    if (!m) return null;
+    var day = parseInt(m[1], 10);
+    var monthKey = m[2].toLowerCase();
+    var month = monthMap[monthKey];
+    if (!month) return null;
+    var currentYear = today.getFullYear();
+    var todayMonth = today.getMonth() + 1; // 1-12
+    var yearGuess = currentYear;
+    // Если сейчас январь–февраль, а месяц события с сентября по декабрь — считаем, что это прошлый год (учебный сезон)
+    if (todayMonth <= 2 && month >= 9) {
+      yearGuess = currentYear - 1;
+    }
+    var dt = new Date(yearGuess, month - 1, day);
+    // Для остальных случаев (конец календарного года) — сдвиг вперёд только если год не был принудительно уменьшен
+    if (yearGuess === currentYear && dt < todayStart && (todayStart - dt) / 86400000 > 15) {
+      dt.setFullYear(currentYear + 1);
+    }
+    return dt;
+  };
+
+  var rows = Array.prototype.slice.call(eventsTable.querySelectorAll('tr'));
+  var parsed = rows
+    .map(function (tr) {
+      var dateCell = tr.cells[0];
+      var dateText = dateCell ? dateCell.textContent : '';
+      var when = parseDate(dateText);
+      if (!when) return null;
+      return {
+        tr: tr,
+        when: when,
+        dateCell: dateCell
+      };
+    })
+    .filter(Boolean);
+
+  if (!parsed.length) return;
+
+  // Делим на прошедшие и будущие
+  var past = [];
+  var upcoming = [];
+  parsed.forEach(function (item) {
+    if (item.when < todayStart) past.push(item);
+    else upcoming.push(item);
+  });
+
+  // Если нет будущих соревнований — показываем заглушку вместо списка
+  if (!upcoming.length) {
+    if (eventsScroll) eventsScroll.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+  } else {
+    if (eventsScroll) eventsScroll.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+  }
+
+  // Сортируем: прошедшие — от самых ранних (сентябрь) к более поздним, будущие — от ближайших к дальним
+  past.sort(function (a, b) { return a.when - b.when; });
+  upcoming.sort(function (a, b) { return a.when - b.when; });
+
+  // Перестраиваем таблицу и проставляем классы/годы
+  eventsTable.innerHTML = '';
+  var currentYear = todayStart.getFullYear();
+
+  // Сначала прошедшие
+  past.forEach(function (item) {
+    item.tr.classList.remove('next-event', 'past-event');
+    item.tr.classList.add('past-event');
+
+    var year = item.when.getFullYear();
+    if (item.dateCell && year !== currentYear && !/\d{4}/.test(item.dateCell.textContent)) {
+      var baseText = item.dateCell.textContent.trim().replace(/\s+\d{4}$/, '');
+      item.dateCell.innerHTML = baseText + '<br><span class="event-year">' + year + '</span>';
+    }
+
+    eventsTable.appendChild(item.tr);
+  });
+
+  // Затем будущие, первая из них — "Ближайшее"
+  var firstUpcomingRow = null;
+  upcoming.forEach(function (item, index) {
+    item.tr.classList.remove('next-event', 'past-event');
+    if (index === 0) {
+      item.tr.classList.add('next-event');
+      firstUpcomingRow = item.tr;
+    }
+
+    var year = item.when.getFullYear();
+    if (item.dateCell && year !== currentYear && !/\d{4}/.test(item.dateCell.textContent)) {
+      var baseText = item.dateCell.textContent.trim().replace(/\s+\d{4}$/, '');
+      item.dateCell.innerHTML = baseText + '<br><span class="event-year">' + year + '</span>';
+    }
+
+    eventsTable.appendChild(item.tr);
+  });
+
+  // При загрузке списка прокручиваем вертикальный контейнер так,
+  // чтобы ближайшее соревнование было видно первым.
+  if (firstUpcomingRow) {
+    var scrollWrap = document.querySelector('#events .events-scroll .table-wrap');
+    if (scrollWrap) {
+      // Высота заголовка таблицы (фиксированный thead), чтобы не перекрывал строку
+      var table = scrollWrap.querySelector('.table');
+      var thead = table ? table.querySelector('thead') : null;
+      var headerHeight = thead ? thead.offsetHeight : 0;
+
+      // Смещаем так, чтобы строка "Ближайшее" была полностью видна под заголовком
+      var offsetTop = firstUpcomingRow.offsetTop;
+      var targetScroll = offsetTop - headerHeight - 8; // небольшой отступ сверху
+      if (targetScroll < 0) targetScroll = 0;
+      scrollWrap.scrollTop = targetScroll;
+    }
+  }
+})();
+
+// Вертикальные стрелки для прокрутки расписания соревнований
+(function () {
+  var wrap = document.querySelector('#events .events-scroll .table-wrap');
+  if (!wrap) return;
+  var btnUp = document.querySelector('#events .events-scroll-up');
+  var btnDown = document.querySelector('#events .events-scroll-down');
+  var step = 140; // шаг прокрутки по клику
+
+  if (btnUp) {
+    btnUp.addEventListener('click', function () {
+      wrap.scrollBy({ top: -step, behavior: 'smooth' });
+    });
+  }
+  if (btnDown) {
+    btnDown.addEventListener('click', function () {
+      wrap.scrollBy({ top: step, behavior: 'smooth' });
+    });
+  }
+})();
+
+// Открытие фото руководителя по клику на имени в hero
+(function () {
+  var coachName = document.querySelector('.hero .name');
+  if (!coachName) return;
   coachName.style.cursor = 'pointer';
-  var openCoach = function () {
+
+  coachName.addEventListener('click', function () {
     var lightbox = document.getElementById('lightbox');
     if (!lightbox) return;
     var lightboxImg = lightbox.querySelector('.lightbox-image');
     var lightboxCaption = lightbox.querySelector('.lightbox-caption');
     var prevBtn = lightbox.querySelector('.lightbox-prev');
     var nextBtn = lightbox.querySelector('.lightbox-next');
+
     lightboxImg.src = 'foto/Ozyumenko_Viktor_Vladimirovich.jpg';
-    if (lightboxCaption) lightboxCaption.textContent = 'Чёрный пояс, 3 дан. Судья первой категории';
+    lightboxImg.alt = 'Тренер Кудо Псков Озюменко Виктор Владимирович';
+    if (lightboxCaption) lightboxCaption.textContent = 'Озюменко Виктор Владимирович, чёрный пояс, 3 дан';
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
     if (prevBtn) prevBtn.style.display = 'none';
     if (nextBtn) nextBtn.style.display = 'none';
-  };
-  coachName.addEventListener('click', openCoach);
-}
-
-// Подсветка ближайшего соревнования по дате
-(function () {
-  var eventsTable = document.querySelector('#events .table tbody');
-  if (!eventsTable) return;
-  var monthMap = {
-    'сент.': 9, 'окт.': 10, 'нояб.': 11, 'дек.': 12,
-    'сентября': 9, 'октября': 10, 'ноября': 11, 'декабря': 12
-  };
-  var today = new Date();
-  var parseDate = function (text) {
-    // примеры: "20–21 сент.", "6–7 дек.", "12–15 декабря"
-    var m = text.trim().match(/(\d{1,2})(?:[–-]\d{1,2})?\s*(сент\.|окт\.|нояб\.|дек\.|сентября|октября|ноября|декабря)/i);
-    if (!m) return null;
-    var day = parseInt(m[1], 10);
-    var monthKey = m[2].toLowerCase();
-    var month = monthMap[monthKey];
-    if (!month) return null;
-    var year = today.getFullYear();
-    var dt = new Date(year, month - 1, day);
-    // если дата уже прошла более чем на 15 дней, сдвигаем на следующий год (на случай конца года)
-    if (dt < today && (today - dt) / 86400000 > 15) dt.setFullYear(year + 1);
-    return dt;
-  };
-
-  var rows = Array.prototype.slice.call(eventsTable.querySelectorAll('tr'));
-  var upcoming = rows
-    .map(function (tr) {
-      var dateCell = tr.cells[0];
-      var dateText = dateCell ? dateCell.textContent : '';
-      var when = parseDate(dateText);
-      return when ? { tr: tr, when: when } : null;
-    })
-    .filter(Boolean)
-    .filter(function (item) { return item.when >= new Date(today.getFullYear(), today.getMonth(), today.getDate()); })
-    .sort(function (a, b) { return a.when - b.when; });
-
-  if (upcoming.length > 0) {
-    var next = upcoming[0].tr;
-    next.classList.add('next-event');
-  }
+  });
 })();
 
 // Добавление кружочков поясов к датам соревнований
@@ -312,8 +431,8 @@ if (coachName) {
     // Определяем набор поясов по возрасту
     if (ageText === 'Все возраста') {
       beltsToShow = allBelts;
-    } else if (ageText === '12 лет и старше' || (ageText.includes('12+') && !ageText.includes(','))) {
-      // Точное совпадение "12 лет и старше" или "12+" без запятых - 4 пояса
+    } else if ((ageText.includes('12 лет и старше') || ageText.includes('12+')) && !ageText.includes(',')) {
+      // Возраст 12+ без перечислений через запятую - 4 пояса
       beltsToShow = seniorBelts;
     } else if (ageText.includes(',') || ageText.includes('Фестиваль') || (ageText.includes('и') && !ageText.includes('12 лет и старше'))) {
       // Если есть запятая, упоминание фестиваля или союз "и" (кроме "12 лет и старше") - все пояса
@@ -355,8 +474,8 @@ if (coachName) {
     var lightboxCaption = lightbox.querySelector('.lightbox-caption');
     var prevBtn = lightbox.querySelector('.lightbox-prev');
     var nextBtn = lightbox.querySelector('.lightbox-next');
-    // Используем WebP версию
     lightboxImg.src = 'foto/poyas_kudo.jpeg';
+    lightboxImg.alt = 'Чёрный пояс Кудо, 3 дан';
     if (lightboxCaption) lightboxCaption.textContent = 'Чёрный пояс, 3 дан';
     lightbox.hidden = false;
     document.body.style.overflow = 'hidden';
