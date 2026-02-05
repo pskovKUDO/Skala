@@ -618,8 +618,9 @@ a:hover { color: var(--accent); }
 
 @media (max-width: 600px) {
   .hero { padding: 28px 0 48px; }
-  .hero-inner { gap: 16px; }
+  .hero-inner { gap: 12px; }
   .hero-media img { width: 180px; }
+  .hero-text p { margin: 6px 0; }
   .albums-container { 
     grid-template-columns: 1fr; 
     gap: 30px; 
